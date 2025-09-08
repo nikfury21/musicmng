@@ -1785,11 +1785,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=kb
         )
 
-    # === Kang registration (your old logic) ===
+    # === Kang registration logic ===
     if args and args[0] == "kang":
         await update.message.reply_text(
             "✅ You’re registered! Now go back and use /kang again."
         )
+        return
+
+    # ✅ Auto-send help when in private chat
+    if update.effective_chat.type == "private":
+        await help_command(update, context)
     else:
         await update.message.reply_text(
             "👋 Hi! I’m your group management bot.\n\n"
@@ -1798,78 +1803,88 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    commands = [
-        "/info - Show user info ",
-        "/warn - Warn user, ban after 3 warns ",
-        "/warns- shows total number of warns a user have"
-        "/del - Delete message (reply)",
-        "/ban - Ban user ",
-        "/unban - Unban user by ID",
-        "/admins - List admins",
-        "/promote - Promote user to admin ",
-        "/demote - Demote admin ",
-        "/addblacklist - Add blacklist word",
-        "/unblacklist - Remove blacklist word",
-        "/blacklist - Show blacklist",
-        "/unblacklistall- deletes all blacklist words"
-        "/approve - Approve user ",
-        "/unapprove - Unapprove user ",
-        "/approved- shows list of all approved users",
-        "/unapproveall- unapproves all approved users",
-        "/purge - Delete last N messages",
-        "/filter - Add filter",
-        "/filters - List filters",
-        "/unfilter - Remove filter",
-        "/afk - Set AFK status",
-        "/mute - Mute user ",
-        "/unmute - Unmute user ",
-        "/id - Show user or chat ID",
-        "/kick - Kick user ",
-        "/tmute - Temporarily mute user ",
-        "/kickme - Kick yourself",
-        "/waifu - Get you partner, approved by astro ",
-        "/tagall - Tag all members",
-        "/pin - Pin message (reply)",
-        "/unpin - Unpin all messages",
-        "/setflood - can restrict user from spamming",
-        "/setfloodmode - action taken if user floods the chat",
-        "/q - can quote texts",
-        "/blacklistmode - tmute/mute/ban/warn/kick/delete ",
-        "/lock - lock any type",
-        "/unlock - unlock any type",
-        "/locks - list of all locks present",
-        "/kang- save any sticker/gif in your pack",
-        "/zombies- Show the number of deleted accounts present",
-        "/rzombies- Remove all the deleted accpunts present",
-        "/tr- translate text to your desired language",
-        "/getsticker- gives sticker in png form with sticker id",
-        "/pp- search for the photo and gives description about it",
-        "/calc- calculates anything",
-        "/report- report to admins",
-        "/nightmode- deletes non-text messages of unapproved and non admin users",
-        "/ud- tells meaning of the wprd",
-        "/rmwarn- remove one warning of user",
-        "/resetwarns- removes all warning of user",
-        "/welcome on/of- turn welcome messages on/off",
-        "/setwelcome- set a welcome message for new users",
-        "/goodbye- turn goodbye message on/off",
-        "/setgoodbye- set a goodbye message who lefts the group",
-        "/when- shows when the message was sent",
-        "/captcha- force user to solve captcha before interacting in group when he/she joins",
-        "/pic - shows all pfp of a user",
-        "/free- free a user and allow to send stickers",
-        "/unfree- restrict a user from sending stickers",
-        "/freelist- shows all freed user",
-        "/character- get a overview of any anime character",
-        "/unfilterall- removes all filters",
-        "/zombies- show total deleted accounts in group",
-        "/rzombies- remove all deleted accounts",
-        "/editdelete - deletes all edited message after 30s"
 
-    ]
-    
-    await update.message.reply_text("Available commands:\n" + "\n".join(commands))
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.type in ["group", "supergroup"]:
+        # Group → Show message with inline button linking to PM
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("💐 Start me in PM!", url=f"https://t.me/{BOT_USERNAME}")]
+        ])
+        await update.message.reply_text(
+            "Start me in pm to know my abilities and commands!",
+            reply_markup=keyboard
+        )
+    else:
+        # Private chat → Show full commands list
+        commands = [
+            "/info - Show user info",
+            "/warn - Warn user, ban after 3 warns",
+            "/warns - Show total number of warns a user has",
+            "/del - Delete message (reply)",
+            "/ban - Ban user",
+            "/unban - Unban user by ID",
+            "/admins - List admins",
+            "/promote - Promote user to admin",
+            "/demote - Demote admin",
+            "/addblacklist - Add blacklist word",
+            "/unblacklist - Remove blacklist word",
+            "/blacklist - Show blacklist",
+            "/unblacklistall - Deletes all blacklist words",
+            "/approve - Approve user",
+            "/unapprove - Unapprove user",
+            "/approved - Show list of all approved users",
+            "/unapproveall - Unapproves all approved users",
+            "/purge - Delete last N messages",
+            "/filter - Add filter",
+            "/filters - List filters",
+            "/unfilter - Remove filter",
+            "/afk - Set AFK status",
+            "/mute - Mute user",
+            "/unmute - Unmute user",
+            "/id - Show user or chat ID",
+            "/kick - Kick user",
+            "/tmute - Temporarily mute user",
+            "/kickme - Kick yourself",
+            "/waifu - Get your partner, approved by astro",
+            "/tagall - Tag all members",
+            "/pin - Pin message (reply)",
+            "/unpin - Unpin all messages",
+            "/setflood - Restrict user from spamming",
+            "/setfloodmode - Action taken if user floods the chat",
+            "/q - Quote texts",
+            "/blacklistmode - tmute/mute/ban/warn/kick/delete",
+            "/lock - Lock any type",
+            "/unlock - Unlock any type",
+            "/locks - List all locks present",
+            "/kang - Save any sticker/gif in your pack",
+            "/zombies - Show number of deleted accounts",
+            "/rzombies - Remove all deleted accounts",
+            "/tr - Translate text to your desired language",
+            "/getsticker - Gives sticker in png form with sticker ID",
+            "/pp - Search for photo and gives description",
+            "/calc - Calculates anything",
+            "/report - Report to admins",
+            "/nightmode - Delete non-text of unapproved/non-admin users",
+            "/ud - Tell meaning of word",
+            "/rmwarn - Remove one warning of user",
+            "/resetwarns - Removes all warnings of user",
+            "/welcome on/off - Enable or disable welcome messages",
+            "/setwelcome - Set custom welcome message",
+            "/goodbye - Enable or disable goodbye messages",
+            "/setgoodbye - Set goodbye message",
+            "/when - Show when a message was sent",
+            "/captcha - Force captcha before user interacts in group",
+            "/pic - Show all profile photos of a user",
+            "/free - Free user, allow sending stickers",
+            "/unfree - Restrict user from sending stickers",
+            "/freelist - Show all freed users",
+            "/character - Overview of anime character",
+            "/unfilterall - Removes all filters",
+            "/editdelete - Deletes all edited messages after 30s"
+        ]
+
+        help_text = "Available commands:\n" + "\n".join(commands)
+        await update.message.reply_text(help_text, parse_mode="HTML")
 
 
 def escape_md(text: str) -> str:
