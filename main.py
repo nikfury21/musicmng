@@ -455,20 +455,21 @@ async def loop_handler(client, message: Message):
 
 
 
-
 @bot.on_message(filters.command("cache"))
 async def cache_handler(client, message: Message):
     # Allow only user with ID 7038303029
     if message.from_user.id != 7038303029:
         return
 
-    import shutil, glob, os
+    import glob, os
 
-    total, used, free = shutil.disk_usage("/tmp")
-    percent_used = used / total * 100
+    TMP_LIMIT_MB = 750  # assumed /tmp quota (adjust if needed)
 
     files = glob.glob("/tmp/*.mp3")
     count = len(files)
+    tmp_used = sum(os.path.getsize(f) for f in files) // (1024 * 1024)  # MB
+    tmp_free = TMP_LIMIT_MB - tmp_used if TMP_LIMIT_MB > tmp_used else 0
+    percent_used = (tmp_used / TMP_LIMIT_MB * 100) if TMP_LIMIT_MB else 0
 
     # Sort by request count (highest first)
     top_files = sorted(files, key=lambda f: cache_requests.get(f, 0), reverse=True)[:5]
@@ -477,7 +478,8 @@ async def cache_handler(client, message: Message):
     for f in top_files:
         name = os.path.basename(f)
         reqs = cache_requests.get(f, 0)
-        file_stats += f"• `{name}` → {reqs} requests\n"
+        size = os.path.getsize(f) // (1024 * 1024)
+        file_stats += f"• `{name}` → {reqs} requests ({size} MB)\n"
 
     if not file_stats:
         file_stats = "No cached songs yet."
@@ -485,9 +487,9 @@ async def cache_handler(client, message: Message):
     reply_text = (
         "📂 **Cache Status**\n\n"
         f"• Cached Songs: `{count}`\n"
-        f"• Used: `{used // (1024*1024)} MB`\n"
-        f"• Free: `{free // (1024*1024)} MB`\n"
-        f"• Total: `{total // (1024*1024)} MB`\n"
+        f"• Used: `{tmp_used} MB`\n"
+        f"• Free: `{tmp_free} MB`\n"
+        f"• Total: `{TMP_LIMIT_MB} MB`\n"
         f"• Usage: `{percent_used:.1f}%`\n\n"
         "**Top 5 Requested Songs:**\n"
         f"{file_stats}"
@@ -1592,6 +1594,7 @@ async def main():
     print("music bot started")
 
     await bot.idle()
+
 
 
 
