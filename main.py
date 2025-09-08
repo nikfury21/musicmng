@@ -243,6 +243,9 @@ CACHE_DIR = "/tmp"
 CACHE_LIMIT_PERCENT = 90  # trigger cleanup if /tmp usage exceeds this
 CACHE_SAFE_PERCENT = 80   # stop cleanup after this level
 
+# Track how many times each cached song was requested
+cache_requests = {}
+
 def cleanup_cache():
     """Deletes old cached files until /tmp is back under safe level."""
     try:
@@ -255,7 +258,9 @@ def cleanup_cache():
         print(f"[Cache Cleanup] /tmp is {percent_used:.1f}% full. Starting cleanup...")
 
         files = glob.glob(os.path.join(CACHE_DIR, "*.mp3"))
-        files.sort(key=os.path.getmtime)  # oldest first
+        # Sort ONLY by request count (least used first)
+        files.sort(key=lambda f: cache_requests.get(f, 0))
+
 
         for f in files:
             try:
@@ -457,7 +462,7 @@ async def cache_handler(client, message: Message):
     if message.from_user.id != 7038303029:
         return
 
-    import shutil, glob
+    import shutil, glob, os
 
     total, used, free = shutil.disk_usage("/tmp")
     percent_used = used / total * 100
@@ -465,16 +470,31 @@ async def cache_handler(client, message: Message):
     files = glob.glob("/tmp/*.mp3")
     count = len(files)
 
+    # Sort by request count (highest first)
+    top_files = sorted(files, key=lambda f: cache_requests.get(f, 0), reverse=True)[:5]
+
+    file_stats = ""
+    for f in top_files:
+        name = os.path.basename(f)
+        reqs = cache_requests.get(f, 0)
+        file_stats += f"• `{name}` → {reqs} requests\n"
+
+    if not file_stats:
+        file_stats = "No cached songs yet."
+
     reply_text = (
         "📂 **Cache Status**\n\n"
         f"• Cached Songs: `{count}`\n"
         f"• Used: `{used // (1024*1024)} MB`\n"
         f"• Free: `{free // (1024*1024)} MB`\n"
         f"• Total: `{total // (1024*1024)} MB`\n"
-        f"• Usage: `{percent_used:.1f}%`\n"
+        f"• Usage: `{percent_used:.1f}%`\n\n"
+        "**Top 5 Requested Songs:**\n"
+        f"{file_stats}"
     )
 
     await message.reply(reply_text)
+
 
 
 @bot.on_message(filters.command("clearcache"))
@@ -483,19 +503,38 @@ async def clearcache_handler(client, message: Message):
     if message.from_user.id != 7038303029:
         return
 
-    import glob, os
+    import shutil, glob, os
+
+    total, used, free = shutil.disk_usage("/tmp")
+    percent_used = used / total * 100
+
+    if percent_used < CACHE_LIMIT_PERCENT:
+        await message.reply("✅ Cache usage is safe, nothing to clear.")
+        return
 
     files = glob.glob("/tmp/*.mp3")
-    deleted = 0
+    # Sort by request count (least requested first)
+    files.sort(key=lambda f: cache_requests.get(f, 0))
 
+    deleted = 0
     for f in files:
         try:
             os.remove(f)
+            cache_requests.pop(f, None)  # remove from tracking
             deleted += 1
         except Exception as e:
             print(f"[ClearCache] Error deleting {f}: {e}")
 
-    await message.reply(f"🗑️ Cleared `{deleted}` cached songs from /tmp.")
+        # Re-check usage
+        total, used, free = shutil.disk_usage("/tmp")
+        percent_used = used / total * 100
+        if percent_used < CACHE_SAFE_PERCENT:
+            break
+
+    await message.reply(
+        f"🗑️ Removed `{deleted}` least-requested songs.\n"
+        f"📊 Cache now at `{percent_used:.1f}%` usage."
+    )
 
 
 
@@ -861,6 +900,8 @@ async def fallback_local_playback(chat_id: int, message: Message, song_info: dic
 
         if os.path.exists(cache_path):
             media_path = cache_path
+            cache_requests[cache_path] = cache_requests.get(cache_path, 0) + 1  # 🔥 count request
+
         else:
             media_path = await vector_transport_resolver(video_url)
 
@@ -1551,6 +1592,7 @@ async def main():
     print("music bot started")
 
     await bot.idle()
+
 
 
 
