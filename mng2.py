@@ -2120,19 +2120,27 @@ async def rmwarn(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def delmsg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await has_permission(update, ["can_delete_messages"]):
-        return await update.message.reply_text("🚫 You need 'Can Delete Messages' permission to use this command.")
+        return await update.message.reply_text(
+            "🚫 You need 'Can Delete Messages' permission to use this command."
+        )
 
     if not await is_admin(update, update.message.from_user.id):
         await update.message.reply_text("You must be an admin to delete messages.")
         return
+
     if not update.message.reply_to_message:
         await update.message.reply_text("Reply to the message to delete it.")
         return
+
     try:
+        # Delete the replied message
         await update.message.reply_to_message.delete()
-        await update.message.reply_text("Message deleted.")
+        # Delete the /del command message itself
+        await update.message.delete()
     except BadRequest as e:
+        # Only show error if deletion fails
         await update.message.reply_text(f"Error: {e}")
+
 
 async def ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await has_permission(update, ["can_restrict_members"]):
