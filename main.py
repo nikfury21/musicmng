@@ -451,7 +451,51 @@ async def loop_handler(client, message: Message):
 
 
 
+@bot.on_message(filters.command("cache"))
+async def cache_handler(client, message: Message):
+    # Allow only user with ID 7038303029
+    if message.from_user.id != 7038303029:
+        return
 
+    import shutil, glob
+
+    total, used, free = shutil.disk_usage("/tmp")
+    percent_used = used / total * 100
+
+    files = glob.glob("/tmp/*.mp3")
+    count = len(files)
+
+    reply_text = (
+        "📂 **Cache Status**\n\n"
+        f"• Cached Songs: `{count}`\n"
+        f"• Used: `{used // (1024*1024)} MB`\n"
+        f"• Free: `{free // (1024*1024)} MB`\n"
+        f"• Total: `{total // (1024*1024)} MB`\n"
+        f"• Usage: `{percent_used:.1f}%`\n"
+    )
+
+    await message.reply(reply_text)
+
+
+@bot.on_message(filters.command("clearcache"))
+async def clearcache_handler(client, message: Message):
+    # Allow only user with ID 7038303029
+    if message.from_user.id != 7038303029:
+        return
+
+    import glob, os
+
+    files = glob.glob("/tmp/*.mp3")
+    deleted = 0
+
+    for f in files:
+        try:
+            os.remove(f)
+            deleted += 1
+        except Exception as e:
+            print(f"[ClearCache] Error deleting {f}: {e}")
+
+    await message.reply(f"🗑️ Cleared `{deleted}` cached songs from /tmp.")
 
 
 
@@ -1507,6 +1551,7 @@ async def main():
     print("music bot started")
 
     await bot.idle()
+
 
 
 
