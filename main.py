@@ -69,6 +69,8 @@ BOT_TOKEN = os.getenv("MAIN_BOT_TOKEN")
 ASSISTANT_SESSION = os.getenv("MAIN_ASSISTANT_SESSION")
 OWNER_ID = os.getenv("MAIN_OWNER_ID")
 BACKUP_SEARCH_API_URL = os.getenv("BACKUP_SEARCH_API_URL", "")
+# put this somewhere at the top of your file
+MODS = [7234298343, 7556899383, 7560366347, 7038303029, 8056147438]  # owner + mod IDs
 
 
 # ——— Monkey-patch resolve_peer ——————————————
@@ -457,8 +459,8 @@ async def loop_handler(client, message: Message):
 
 @bot.on_message(filters.command("cache"))
 async def cache_handler(client, message: Message):
-    # Allow only user with ID 7038303029
-    if message.from_user.id != 7038303029:
+    # Allow only owner or hardcoded mods
+    if message.from_user.id not in MODS:
         return
 
     import glob, os, shutil
@@ -487,7 +489,7 @@ async def cache_handler(client, message: Message):
         file_stats = "No cached songs yet."
 
     reply_text = (
-        "📂 **Cache Status**\n\n"
+        "📂 **Cache Status (/tmp)**\n\n"
         f"• Cached Songs: `{count}`\n"
         f"• Used: `{tmp_used} MB`\n"
         f"• Free: `{tmp_free} MB`\n"
@@ -502,8 +504,8 @@ async def cache_handler(client, message: Message):
 
 @bot.on_message(filters.command("clearcache"))
 async def clearcache_handler(client, message: Message):
-    # Allow only user with ID 7038303029
-    if message.from_user.id != 7038303029:
+    # Allow only owner or hardcoded mods
+    if message.from_user.id not in MODS:
         return
 
     import shutil, glob, os
@@ -538,7 +540,6 @@ async def clearcache_handler(client, message: Message):
         f"🗑️ Removed `{deleted}` least-requested songs.\n"
         f"📊 Cache now at `{percent_used:.1f}%` usage."
     )
-
 
 
 
@@ -1595,6 +1596,7 @@ async def main():
     print("music bot started")
 
     await bot.idle()
+
 
 
 
