@@ -236,6 +236,44 @@ def get_cache_path(url: str) -> str:
     return os.path.join("/tmp", f"{url_hash}.mp3")
 
 
+import shutil
+import glob
+
+CACHE_DIR = "/tmp"
+CACHE_LIMIT_PERCENT = 90  # trigger cleanup if /tmp usage exceeds this
+CACHE_SAFE_PERCENT = 80   # stop cleanup after this level
+
+def cleanup_cache():
+    """Deletes old cached files until /tmp is back under safe level."""
+    try:
+        total, used, free = shutil.disk_usage(CACHE_DIR)
+        percent_used = used / total * 100
+
+        if percent_used < CACHE_LIMIT_PERCENT:
+            return  # nothing to clean
+
+        print(f"[Cache Cleanup] /tmp is {percent_used:.1f}% full. Starting cleanup...")
+
+        files = glob.glob(os.path.join(CACHE_DIR, "*.mp3"))
+        files.sort(key=os.path.getmtime)  # oldest first
+
+        for f in files:
+            try:
+                os.remove(f)
+                print(f"[Cache Cleanup] Deleted {f}")
+            except Exception as e:
+                print(f"[Cache Cleanup] Error deleting {f}: {e}")
+
+            # Re-check usage after each delete
+            total, used, free = shutil.disk_usage(CACHE_DIR)
+            percent_used = used / total * 100
+            if percent_used < CACHE_SAFE_PERCENT:
+                print(f"[Cache Cleanup] Done. Now {percent_used:.1f}% used.")
+                break
+    except Exception as e:
+        print(f"[Cache Cleanup] Error during cleanup: {e}")
+
+
 async def is_assistant_in_chat(chat_id):
     try:
         member = await assistant.get_chat_member(chat_id, ASSISTANT_USERNAME)
@@ -775,10 +813,13 @@ async def fallback_local_playback(chat_id: int, message: Message, song_info: dic
 
         # Download & play locally with cache
         cache_path = get_cache_path(video_url)
+        cleanup_cache()  # 🔥 run cleanup only if /tmp is getting full
+
         if os.path.exists(cache_path):
             media_path = cache_path
         else:
             media_path = await vector_transport_resolver(video_url)
+
 
             if media_path != cache_path:
                 try:
@@ -1466,6 +1507,7 @@ async def main():
     print("music bot started")
 
     await bot.idle()
+
 
 
 
