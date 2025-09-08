@@ -100,7 +100,14 @@ asyncio.get_event_loop().set_exception_handler(_custom_exception_handler)
 
 session_name = os.environ.get("SESSION_NAME", "music_bot1")
 bot = Client(session_name, bot_token=BOT_TOKEN, api_id=API_ID, api_hash=API_HASH, in_memory=True)
-assistant = Client("assistant_account", session_string=ASSISTANT_SESSION, in_memory=True)
+assistant = Client(
+    "assistant_account",
+    session_string=ASSISTANT_SESSION,
+    api_id=API_ID,
+    api_hash=API_HASH,
+    in_memory=True
+)
+
 call_py = PyTgCalls(assistant)
 
 
@@ -1459,6 +1466,7 @@ async def main():
     print("music bot started")
 
     await bot.idle()
+
 
 
 
