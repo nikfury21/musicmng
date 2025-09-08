@@ -706,12 +706,21 @@ async def edited_message_handler(update: Update, context: ContextTypes.DEFAULT_T
         print(f"[DEBUG] Scheduled deletion job for message {message_id} in 30 seconds")
         
         try:
-            await context.bot.send_message(
+            warn_msg = await context.bot.send_message(
                 chat_id=chat_id,
                 text=f"<a href='tg://user?id={user_id}'>{user.first_name}</a> edited their message. It will be deleted in 30 seconds!",
                 reply_to_message_id=message_id,
                 parse_mode="HTML"
             )
+
+            # Schedule deletion of the warning message too
+            context.job_queue.run_once(
+                delete_edited_message,
+                when=30,
+                data=(chat_id, warn_msg.message_id),
+                name=f"delete_warning_{chat_id}_{warn_msg.message_id}"
+            )
+
         except Exception as e:
             print(f"[DEBUG] Failed to send confirmation message: {e}")
         
@@ -1855,7 +1864,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/character- get a overview of any anime character",
         "/unfilterall- removes all filters",
         "/zombies- show total deleted accounts in group",
-        "/rzombies- remove all deleted accounts"
+        "/rzombies- remove all deleted accounts",
         "/editdelete - deletes all edited message after 30s"
 
     ]
