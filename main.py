@@ -251,8 +251,10 @@ cache_requests = {}
 def cleanup_cache():
     """Deletes old cached files until /tmp is back under safe level."""
     try:
-        total, used, free = shutil.disk_usage(CACHE_DIR)
-        percent_used = used / total * 100
+        TMP_LIMIT_MB = 750
+        used_mb = sum(os.path.getsize(f) for f in glob.glob(os.path.join(CACHE_DIR, "*.mp3"))) // (1024 * 1024)
+        percent_used = (used_mb / TMP_LIMIT_MB * 100) if TMP_LIMIT_MB else 0
+
 
         if percent_used < CACHE_LIMIT_PERCENT:
             return  # nothing to clean
@@ -272,8 +274,9 @@ def cleanup_cache():
                 print(f"[Cache Cleanup] Error deleting {f}: {e}")
 
             # Re-check usage after each delete
-            total, used, free = shutil.disk_usage(CACHE_DIR)
-            percent_used = used / total * 100
+            used_mb = sum(os.path.getsize(f) for f in glob.glob(os.path.join(CACHE_DIR, "*.mp3"))) // (1024 * 1024)
+            percent_used = (used_mb / TMP_LIMIT_MB * 100) if TMP_LIMIT_MB else 0
+
             if percent_used < CACHE_SAFE_PERCENT:
                 print(f"[Cache Cleanup] Done. Now {percent_used:.1f}% used.")
                 break
@@ -450,13 +453,6 @@ async def loop_handler(client, message: Message):
 
 
 
-
-
-
-
-
-
-
 @bot.on_message(filters.command("cache"))
 async def cache_handler(client, message: Message):
     # Allow only owner or hardcoded mods
@@ -465,9 +461,8 @@ async def cache_handler(client, message: Message):
 
     import glob, os, shutil
 
-    # Dynamically get /tmp size
-    total, used, free = shutil.disk_usage("/tmp")
-    TMP_LIMIT_MB = total // (1024 * 1024)   # total capacity in MB
+    # Force /tmp limit to 750 MB instead of reading from disk
+    TMP_LIMIT_MB = 750
 
     files = glob.glob("/tmp/*.mp3")
     count = len(files)
@@ -510,8 +505,10 @@ async def clearcache_handler(client, message: Message):
 
     import shutil, glob, os
 
-    total, used, free = shutil.disk_usage("/tmp")
-    percent_used = used / total * 100
+    TMP_LIMIT_MB = 750
+
+    tmp_used = sum(os.path.getsize(f) for f in glob.glob("/tmp/*.mp3")) // (1024 * 1024)
+    percent_used = (tmp_used / TMP_LIMIT_MB * 100) if TMP_LIMIT_MB else 0
 
     if percent_used < CACHE_LIMIT_PERCENT:
         await message.reply("✅ Cache usage is safe, nothing to clear.")
@@ -531,8 +528,8 @@ async def clearcache_handler(client, message: Message):
             print(f"[ClearCache] Error deleting {f}: {e}")
 
         # Re-check usage
-        total, used, free = shutil.disk_usage("/tmp")
-        percent_used = used / total * 100
+        tmp_used = sum(os.path.getsize(f) for f in glob.glob("/tmp/*.mp3")) // (1024 * 1024)
+        percent_used = (tmp_used / TMP_LIMIT_MB * 100) if TMP_LIMIT_MB else 0
         if percent_used < CACHE_SAFE_PERCENT:
             break
 
@@ -540,7 +537,6 @@ async def clearcache_handler(client, message: Message):
         f"🗑️ Removed `{deleted}` least-requested songs.\n"
         f"📊 Cache now at `{percent_used:.1f}%` usage."
     )
-
 
 
 
@@ -1596,6 +1592,7 @@ async def main():
     print("music bot started")
 
     await bot.idle()
+
 
 
 
