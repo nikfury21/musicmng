@@ -461,9 +461,11 @@ async def cache_handler(client, message: Message):
     if message.from_user.id != 7038303029:
         return
 
-    import glob, os
+    import glob, os, shutil
 
-    TMP_LIMIT_MB = 750  # assumed /tmp quota (adjust if needed)
+    # Dynamically get /tmp size
+    total, used, free = shutil.disk_usage("/tmp")
+    TMP_LIMIT_MB = total // (1024 * 1024)   # total capacity in MB
 
     files = glob.glob("/tmp/*.mp3")
     count = len(files)
@@ -496,7 +498,6 @@ async def cache_handler(client, message: Message):
     )
 
     await message.reply(reply_text)
-
 
 
 @bot.on_message(filters.command("clearcache"))
@@ -1594,6 +1595,7 @@ async def main():
     print("music bot started")
 
     await bot.idle()
+
 
 
 
